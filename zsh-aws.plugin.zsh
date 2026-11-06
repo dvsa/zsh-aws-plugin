@@ -119,21 +119,22 @@ function aws_auth_mfa() {
   # Call STS to get the session credentials
   #
   # Assumes "sts get-session-token" is permitted without MFA
-  session_tokens=($(aws sts get-session-token --token-code "${token_code}" --serial-number "${mfa_serial}" --output text));
+  session_tokens=($(aws sts get-session-token --token-code "${token_code}" --serial-number "${mfa_serial}" --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken,Expiration]' --output text));
+
   if ! [ "${?}" -eq 0 ]; then
     echo "STS MFA Request Failed" >&2;
     return 1;
   fi;
 
   # Set the environment credentials as given by STS
-  export AWS_ACCESS_KEY_ID="${session_tokens[(w)2]}";
-  export AWS_SECRET_ACCESS_KEY="${session_tokens[(w)4]}";
-  export AWS_SESSION_TOKEN="${session_tokens[(w)5]}";
+  export AWS_ACCESS_KEY_ID="${session_tokens[(w)1]}";
+  export AWS_SECRET_ACCESS_KEY="${session_tokens[(w)2]}";
+  export AWS_SESSION_TOKEN="${session_tokens[(w)3]}";
 
   export AWS_MFA_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}";
   export AWS_MFA_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}";
   export AWS_MFA_SESSION_TOKEN="${AWS_SESSION_TOKEN}";
-  export AWS_MFA_EXPIRY="${session_tokens[(w)3]}";
+  export AWS_MFA_EXPIRY="${session_tokens[(w)4]}";
 
   if [[ -n "${AWS_ACCESS_KEY_ID}" && -n "${AWS_SECRET_ACCESS_KEY}" && -n "${AWS_SESSION_TOKEN}" ]]; then
     echo "MFA Succeeded. With great power comes great responsibility...";
